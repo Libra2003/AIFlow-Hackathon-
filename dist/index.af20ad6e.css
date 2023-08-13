@@ -1,0 +1,44 @@
+button {
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  text-align: center;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  vertical-align: middle;
+  background-color: #0a66c2;
+  border: 0;
+  border-radius: 100px;
+  justify-content: center;
+  align-items: center;
+  min-width: 0;
+  max-width: 480px;
+  min-height: 40px;
+  padding: 0 20px;
+  font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica Neue, Fira Sans, Ubuntu, Oxygen, Oxygen Sans, Cantarell, Droid Sans, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Lucida Grande, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 20px;
+  transition: background-color .167s cubic-bezier(.4, 0, .2, 1), box-shadow .167s cubic-bezier(.4, 0, .2, 1), color .167s cubic-bezier(.4, 0, .2, 1);
+  display: inline-flex;
+  overflow: hidden;
+}
+
+button:hover, button:focus {
+  color: #fff;
+  background-color: #16437e;
+}
+
+button:active {
+  color: #ffffffb3;
+  background: #09223b;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  color: #0000004d;
+  background: #00000014;
+}
+
+/*# sourceMappingURL=index.af20ad6e.css.map */
