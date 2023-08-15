@@ -574,10 +574,13 @@ function hmrAccept(bundle /*: ParcelRequire */ , id /*: string */ ) {
 }
 
 },{}],"gLLPy":[function(require,module,exports) {
-// Import necessary modules
-var _three = require("three"); // Import the THREE.js library
-var _orbitControlsJs = require("three/examples/jsm/controls/OrbitControls.js"); // Import OrbitControls for camera manipulation
-var _mainCss = require("./main.css"); // Import the main CSS file
+var _three = require("three");
+var _orbitControlsJs = require("three/examples/jsm/controls/OrbitControls.js");
+var _onKeyPress = require("./onKeyPress");
+var _onClickScatter = require("./onClick_Scatter");
+var _onMouseMove = require("./onMouseMove");
+var _onDoubleClick = require("./onDoubleClick");
+var _mainCss = require("./main.css");
 // Create the scene
 const scene = new _three.Scene(); // Create a new 3D scene
 scene.background = new _three.Color(0x87ceeb); // Set the scene background color to sky blue
@@ -604,7 +607,7 @@ const gridHelper = new _three.GridHelper(size, divisions); // Create a grid help
 gridHelper.position.y = 0.001; // Set the grid slightly above the plane
 scene.add(gridHelper); // Add the grid helper to the scene
 // Create orbit controls
-const controls = new (0, _orbitControlsJs.OrbitControls)(camera, renderer.domElement); // Create orbit controls for camera interaction
+let controls = new (0, _orbitControlsJs.OrbitControls)(camera, renderer.domElement); // Create orbit controls for camera interaction
 // Create raycaster and mouse vector
 const raycaster = new _three.Raycaster(); // Create a raycaster to cast rays for picking objects
 const mouse = new _three.Vector2(); // Create a 2D vector to store mouse coordinates
@@ -650,6 +653,7 @@ placeButton.addEventListener("click", ()=>{
     copyButton.disabled = false;
     placeButton.disabled = true;
     cancelButton.disabled = false;
+    console.log(placing);
 });
 cancelButton.addEventListener("click", ()=>{
     copying = false;
@@ -658,130 +662,24 @@ cancelButton.addEventListener("click", ()=>{
     placeButton.disabled = false;
     cancelButton.disabled = true;
 });
-// Double click event listener
-window.addEventListener("click", onDoubleClick, false);
-// Function to handle double click event
-function onDoubleClick(event) {
-    if (!placing && !isDragging) {
-        mouse.x = event.clientX / window.innerWidth * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(boxMeshes);
-        if (intersects.length > 0) {
-            selectedBox = intersects[0].object;
-            offset.copy(selectedBox.position).sub(intersects[0].point);
-            isDragging = true;
-            controls.enabled = false;
-        }
-    }
-}
-// Mouse move event listener
-window.addEventListener("mousemove", onMouseMove, false);
-// Function to handle mouse move
-function onMouseMove(event) {
-    if (isDragging && selectedBox) {
-        mouse.x = event.clientX / window.innerWidth * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObject(planeMesh);
-        if (intersects.length > 0) {
-            const intersectionPoint = intersects[0].point;
-            selectedBox.position.copy(intersectionPoint).add(offset);
-            const halfBoxHeight = selectedBox.geometry.parameters.height / 2;
-            if (selectedBox.position.y < halfBoxHeight) selectedBox.position.y = halfBoxHeight;
-        }
-    }
-}
-// Mouse up event listener
-window.addEventListener("mouseup", onMouseUp, false);
-// Function to handle mouse up
-function onMouseUp() {
-    isDragging = false;
-    selectedBox = null;
-    controls.enabled = true;
-}
-// Click on scatter event listener
-window.addEventListener("click", onClick_Scatter, false);
-// Function to handle click on scatter
-function onClick_Scatter(event) {
-    mouse.x = event.clientX / window.innerWidth * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects([
-        planeMesh
-    ]);
-    if (intersects.length > 0) {
-        const intersectionPoint = intersects[0].point;
-        if (placing) {
-            const boxSize = 0.5;
-            const boxGeometry = new _three.BoxGeometry(boxSize, boxSize, boxSize);
-            const boxColor = Math.random() * 0xffffff;
-            const boxMaterial = new _three.MeshBasicMaterial({
-                color: boxColor
-            });
-            const boxMesh = new _three.Mesh(boxGeometry, boxMaterial);
-            boxMesh.position.copy(intersectionPoint);
-            boxMesh.position.y += boxSize / 2;
-            boxMesh.rotation.set(0, 0, 0);
-            scene.add(boxMesh);
-            boxMeshes.push(boxMesh);
-            placing = false;
-            placeButton.disabled = true;
-            cancelButton.disabled = true;
-        } else if (copying) {
-            const boxSize = 0.5;
-            const boxGeometry = new _three.BoxGeometry(boxSize, boxSize, boxSize);
-            const boxColor = Math.random() * 0xffffff;
-            const boxMaterial = new _three.MeshBasicMaterial({
-                color: boxColor
-            });
-            const boxMesh = new _three.Mesh(boxGeometry, boxMaterial);
-            boxMesh.position.copy(intersectionPoint);
-            boxMesh.position.y += boxSize / 2;
-            boxMesh.rotation.set(0, 0, 0);
-            scene.add(boxMesh);
-            boxMeshes.push(boxMesh);
-        }
-    }
-}
-// Key press event listener
-window.addEventListener("keydown", onKeyPress, false);
-// Function to handle key presses
-function onKeyPress(event) {
-    if (selectedBox) {
-        const moveDistance = 0.3;
-        const rotationSpeed = 1;
-        switch(event.key){
-            case "ArrowUp":
-                if (event.shiftKey) selectedBox.position.y -= moveDistance;
-                selectedBox.position.z -= moveDistance;
-                break;
-            case "ArrowDown":
-                if (event.shiftKey) selectedBox.position.y += moveDistance;
-                selectedBox.position.z += moveDistance;
-                break;
-            case "ArrowLeft":
-                selectedBox.position.x -= moveDistance;
-                break;
-            case "ArrowRight":
-                selectedBox.position.x += moveDistance;
-                break;
-            case "r":
-            case "R":
-                if (event.shiftKey) selectedBox.rotation.y += rotationSpeed;
-                else selectedBox.rotation.y -= rotationSpeed;
-                break;
-            case "t":
-            case "T":
-                if (event.shiftKey) selectedBox.rotation.z += rotationSpeed;
-                else selectedBox.rotation.z -= rotationSpeed;
-            default:
-                return;
-        }
-        const halfBoxHeight = selectedBox.geometry.parameters.height / 2;
-        if (selectedBox.position.y < halfBoxHeight) selectedBox.position.y = halfBoxHeight;
-    }
-}
+window.addEventListener("dblclick", (event)=>{
+    const result = (0, _onDoubleClick.onDoubleClick)(event, placing, isDragging, mouse, raycaster, camera, selectedBox, offset, controls, boxMeshes, planeMesh, camera);
+    controls = result.controls;
+    isDragging = result.isDragging;
+    selectedBox = result.selectedBox;
+    console.log("main: ", isDragging);
+}, false);
+window.addEventListener("mousemove", (event)=>{
+    (0, _onMouseMove.onMouseMove)(event, isDragging, selectedBox, mouse, raycaster, planeMesh, camera, offset, controls);
+    console.log("mouseMove: " + isDragging);
+    console.log("selectedBox: " + selectedBox);
+}, false);
+window.addEventListener("click", (event)=>{
+    (0, _onClickScatter.onClick_Scatter)(event, mouse, raycaster, camera, planeMesh, placing, copying, boxMeshes, placeButton, scene, cancelButton);
+}, false);
+window.addEventListener("keydown", (event)=>{
+    (0, _onKeyPress.onKeyPress)(event, selectedBox, geometry);
+}, false);
 // Animation loop
 const animate = ()=>{
     requestAnimationFrame(animate);
@@ -790,7 +688,7 @@ const animate = ()=>{
 };
 animate();
 
-},{"three":"ktPTu","three/examples/jsm/controls/OrbitControls.js":"7mqRv","./main.css":"5d8d2"}],"ktPTu":[function(require,module,exports) {
+},{"three":"ktPTu","three/examples/jsm/controls/OrbitControls.js":"7mqRv","./main.css":"5d8d2","./onDoubleClick":"f7eag","./onKeyPress":"iEb86","./onClick_Scatter":"czOGk","./onMouseMove":"5x649"}],"ktPTu":[function(require,module,exports) {
 /**
  * @license
  * Copyright 2010-2023 Three.js Authors
@@ -31560,6 +31458,155 @@ class OrbitControls extends (0, _three.EventDispatcher) {
     }
 }
 
-},{"three":"ktPTu","@parcel/transformer-js/src/esmodule-helpers.js":"1JmfK"}],"5d8d2":[function() {},{}]},["cPaUl","gLLPy"], "gLLPy", "parcelRequire5e5d")
+},{"three":"ktPTu","@parcel/transformer-js/src/esmodule-helpers.js":"1JmfK"}],"5d8d2":[function() {},{}],"f7eag":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// Function to handle double click event
+parcelHelpers.export(exports, "onDoubleClick", ()=>onDoubleClick);
+var _onMouseMove = require("./onMouseMove");
+function onDoubleClick(event, placing, isDragging, mouse, raycaster, camera, selectedBox, offset, controls, boxMeshes, planeMesh, camera) {
+    console.log(placing, isDragging);
+    if (!placing && !isDragging) {
+        mouse.x = event.clientX / window.innerWidth * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(boxMeshes);
+        if (intersects.length > 0) {
+            selectedBox = intersects[0].object;
+            offset.copy(selectedBox.position).sub(intersects[0].point);
+            isDragging = true;
+            controls.enabled = false;
+            console.log("clicked");
+        }
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"1JmfK","./onMouseMove":"5x649"}],"5x649":[function(require,module,exports) {
+// Function to handle mouse up
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "onMouseUp", ()=>onMouseUp);
+// Function to handle mouse move
+parcelHelpers.export(exports, "onMouseMove", ()=>onMouseMove);
+function onMouseUp(isDragging, selectedBox, controls) {
+    console.log("Dragging7");
+    isDragging = false;
+    selectedBox = null;
+    controls.enabled = true;
+    return isDragging;
+}
+function onMouseMove(event, isDragging, selectedBox, mouse, raycaster, planeMesh, camera, offset, controls) {
+    if (isDragging && selectedBox) {
+        console.log("Dragging2");
+        mouse.x = event.clientX / window.innerWidth * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObject(planeMesh);
+        if (intersects.length > 0) {
+            console.log("Dragging3");
+            const intersectionPoint = intersects[0].point;
+            selectedBox.position.copy(intersectionPoint).add(offset);
+            const halfBoxHeight = selectedBox.geometry.parameters.height / 2;
+            if (selectedBox.position.y < halfBoxHeight) {
+                selectedBox.position.y = halfBoxHeight;
+                console.log("Dragging4");
+                window.addEventListener("mouseup", (event)=>{
+                    onMouseUp(event, isDragging, selectedBox, controls);
+                }, false);
+            }
+        }
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"1JmfK"}],"iEb86":[function(require,module,exports) {
+// Function to handle key presses
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "onKeyPress", ()=>onKeyPress);
+function onKeyPress(event, selectedBox, geometry) {
+    if (selectedBox) {
+        const moveDistance = 0.3;
+        const rotationSpeed = 1;
+        switch(event.key){
+            case "ArrowUp":
+                if (event.shiftKey) selectedBox.position.y -= moveDistance;
+                selectedBox.position.z -= moveDistance;
+                break;
+            case "ArrowDown":
+                if (event.shiftKey) selectedBox.position.y += moveDistance;
+                selectedBox.position.z += moveDistance;
+                break;
+            case "ArrowLeft":
+                selectedBox.position.x -= moveDistance;
+                break;
+            case "ArrowRight":
+                selectedBox.position.x += moveDistance;
+                break;
+            case "r":
+            case "R":
+                if (event.shiftKey) selectedBox.rotation.y += rotationSpeed;
+                else selectedBox.rotation.y -= rotationSpeed;
+                break;
+            case "t":
+            case "T":
+                if (event.shiftKey) selectedBox.rotation.z += rotationSpeed;
+                else selectedBox.rotation.z -= rotationSpeed;
+            default:
+                return;
+        }
+        const halfBoxHeight = selectedBox.geometry.parameters.height / 2;
+        if (selectedBox.position.y < halfBoxHeight) selectedBox.position.y = halfBoxHeight;
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"1JmfK"}],"czOGk":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// Function to handle click on scatter
+parcelHelpers.export(exports, "onClick_Scatter", ()=>onClick_Scatter);
+var _three = require("three");
+function onClick_Scatter(event, mouse, raycaster, camera, planeMesh, placing, copying, boxMeshes, placeButton, scene, cancelButton) {
+    mouse.x = event.clientX / window.innerWidth * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects([
+        planeMesh
+    ]);
+    if (intersects.length > 0) {
+        const intersectionPoint = intersects[0].point;
+        if (placing) {
+            const boxSize = 0.5;
+            const boxGeometry = new _three.BoxGeometry(boxSize, boxSize, boxSize);
+            const boxColor = Math.random() * 0xffffff;
+            const boxMaterial = new _three.MeshBasicMaterial({
+                color: boxColor
+            });
+            const boxMesh = new _three.Mesh(boxGeometry, boxMaterial);
+            boxMesh.position.copy(intersectionPoint);
+            boxMesh.position.y += boxSize / 2;
+            boxMesh.rotation.set(0, 0, 0);
+            scene.add(boxMesh);
+            boxMeshes.push(boxMesh);
+            placeButton.disabled = true;
+            cancelButton.disabled = true;
+            placing = false;
+        } else if (copying) {
+            const boxSize = 0.5;
+            const boxGeometry = new _three.BoxGeometry(boxSize, boxSize, boxSize);
+            const boxColor = Math.random() * 0xffffff;
+            const boxMaterial = new _three.MeshBasicMaterial({
+                color: boxColor
+            });
+            const boxMesh = new _three.Mesh(boxGeometry, boxMaterial);
+            boxMesh.position.copy(intersectionPoint);
+            boxMesh.position.y += boxSize / 2;
+            boxMesh.rotation.set(0, 0, 0);
+            scene.add(boxMesh);
+            boxMeshes.push(boxMesh);
+        }
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"1JmfK","three":"ktPTu"}]},["cPaUl","gLLPy"], "gLLPy", "parcelRequire5e5d")
 
 //# sourceMappingURL=index.4d6bcbeb.js.map

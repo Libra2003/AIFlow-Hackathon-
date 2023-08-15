@@ -1,7 +1,11 @@
-// Import necessary modules
-import * as THREE from 'three'; // Import the THREE.js library
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'; // Import OrbitControls for camera manipulation
-import "./main.css"; // Import the main CSS file
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { onKeyPress } from './onKeyPress';
+import { onClick_Scatter } from './onClick_Scatter';
+import { onMouseMove, onMouseUp } from './onMouseMove';
+import { onDoubleClick } from './onDoubleClick';
+
+import "./main.css";
 
 // Create the scene
 const scene = new THREE.Scene(); // Create a new 3D scene
@@ -32,11 +36,12 @@ gridHelper.position.y = 0.001; // Set the grid slightly above the plane
 scene.add(gridHelper); // Add the grid helper to the scene
 
 // Create orbit controls
-const controls = new OrbitControls(camera, renderer.domElement); // Create orbit controls for camera interaction
+let controls = new OrbitControls(camera, renderer.domElement); // Create orbit controls for camera interaction
 
 // Create raycaster and mouse vector
 const raycaster = new THREE.Raycaster(); // Create a raycaster to cast rays for picking objects
 const mouse = new THREE.Vector2(); // Create a 2D vector to store mouse coordinates
+
 const boxMeshes = []; // Array to store box meshes
 
 // Create buttons for actions
@@ -85,6 +90,7 @@ placeButton.addEventListener('click', () => {
     copyButton.disabled = false;
     placeButton.disabled = true;
     cancelButton.disabled = false;
+    console.log(placing);
 });
 
 cancelButton.addEventListener('click', () => {
@@ -95,153 +101,34 @@ cancelButton.addEventListener('click', () => {
     cancelButton.disabled = true;
 });
 
-// Double click event listener
-window.addEventListener('click', onDoubleClick, false);
 
-// Function to handle double click event
-function onDoubleClick(event) {
-    if (!placing && !isDragging) {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(boxMeshes);
+window.addEventListener('dblclick', (event) => {
+    const result = onDoubleClick(event, placing, isDragging, mouse, raycaster, camera, selectedBox, offset, controls, boxMeshes, planeMesh, camera);
+    controls = result.controls;
+    isDragging = result.isDragging;
+    selectedBox = result.selectedBox;
+    console.log("main: ", isDragging);
+}, false);
 
-        if (intersects.length > 0) {
-            selectedBox = intersects[0].object;
-            offset.copy(selectedBox.position).sub(intersects[0].point);
-            isDragging = true;
-            controls.enabled = false;
-        }
-    }
-}
+window.addEventListener('mousemove', (event) => {
 
-// Mouse move event listener
-window.addEventListener('mousemove', onMouseMove, false);
+    onMouseMove(event, isDragging, selectedBox, mouse, raycaster, planeMesh, camera, offset, controls);
+    console.log("mouseMove: "+ isDragging);
+    console.log("selectedBox: "+ selectedBox);
 
-// Function to handle mouse move
-function onMouseMove(event) {
-    if (isDragging && selectedBox) {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObject(planeMesh);
 
-        if (intersects.length > 0) {
-            const intersectionPoint = intersects[0].point;
-            selectedBox.position.copy(intersectionPoint).add(offset);
-            const halfBoxHeight = selectedBox.geometry.parameters.height / 2;
-            if (selectedBox.position.y < halfBoxHeight) {
-                selectedBox.position.y = halfBoxHeight;
-            }
-        }
-    }
-}
+}, false);
 
-// Mouse up event listener
-window.addEventListener('mouseup', onMouseUp, false);
+window.addEventListener('click', (event) => {
+ 
+     onClick_Scatter(event, mouse, raycaster, camera, planeMesh, placing,copying, boxMeshes, placeButton, scene, cancelButton);
+ 
+}, false);
 
-// Function to handle mouse up
-function onMouseUp() {
-    isDragging = false;
-    selectedBox = null;
-    controls.enabled = true;
-}
 
-// Click on scatter event listener
-window.addEventListener('click', onClick_Scatter, false);
-
-// Function to handle click on scatter
-function onClick_Scatter(event) {
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects([planeMesh]);
-
-    if (intersects.length > 0) {
-        const intersectionPoint = intersects[0].point;
-
-        if (placing) {
-            const boxSize = 0.5;
-            const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-            const boxColor = Math.random() * 0xffffff;
-            const boxMaterial = new THREE.MeshBasicMaterial({ color: boxColor });
-            const boxMesh = new THREE.Mesh(boxGeometry, boxMaterial);
-            boxMesh.position.copy(intersectionPoint);
-            boxMesh.position.y += boxSize / 2;
-            boxMesh.rotation.set(0, 0, 0);
-            scene.add(boxMesh);
-            boxMeshes.push(boxMesh);
-            placing = false;
-            placeButton.disabled = true;
-            cancelButton.disabled = true;
-        } else if (copying) {
-            const boxSize = 0.5;
-            const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-            const boxColor = Math.random() * 0xffffff;
-            const boxMaterial = new THREE.MeshBasicMaterial({ color: boxColor });
-            const boxMesh = new THREE.Mesh(boxGeometry, boxMaterial);
-            boxMesh.position.copy(intersectionPoint);
-            boxMesh.position.y += boxSize / 2;
-            boxMesh.rotation.set(0, 0, 0);
-            scene.add(boxMesh);
-            boxMeshes.push(boxMesh);
-        }
-    }
-}
-
-// Key press event listener
-window.addEventListener('keydown', onKeyPress, false);
-
-// Function to handle key presses
-function onKeyPress(event) {
-    if (selectedBox) {
-        const moveDistance = 0.3;
-        const rotationSpeed = 1;
-
-        switch (event.key) {
-            case 'ArrowUp':
-                if(event.shiftKey){
-                    selectedBox.position.y -= moveDistance;
-                }
-                selectedBox.position.z -= moveDistance;
-                break;
-            case 'ArrowDown':
-                if(event.shiftKey){
-                    selectedBox.position.y += moveDistance;
-                }
-                selectedBox.position.z += moveDistance;
-                break;
-            case 'ArrowLeft':
-                selectedBox.position.x -= moveDistance;
-                break;
-            case 'ArrowRight':
-                selectedBox.position.x += moveDistance;
-                break;
-            case 'r':
-            case 'R':
-                if (event.shiftKey) {
-                    selectedBox.rotation.y += rotationSpeed;
-                } else {
-                    selectedBox.rotation.y -= rotationSpeed;
-                }
-                break;
-            case 't':
-            case 'T':
-                if (event.shiftKey) {
-                    selectedBox.rotation.z += rotationSpeed;
-                } else {
-                    selectedBox.rotation.z -= rotationSpeed;
-                }
-            default:
-                return;
-        }
-
-        const halfBoxHeight = selectedBox.geometry.parameters.height / 2;
-        if (selectedBox.position.y < halfBoxHeight) {
-            selectedBox.position.y = halfBoxHeight;
-        }
-    }
-}
+window.addEventListener('keydown', (event) => {
+    onKeyPress(event, selectedBox,geometry);
+}, false);
 
 // Animation loop
 const animate = () => {
